@@ -3,9 +3,7 @@ package scnet
 import (
 	"fmt"
 	"io"
-	"log"
 	"net"
-	"strconv"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -183,29 +181,6 @@ func Send(conn net.Conn, packetType int32, data []byte) error {
 	return nil
 }
 
-// Start ...
-func Start(port int) {
-	address := ":" + strconv.Itoa(port)
-	fmt.Println("service started:", address)
-
-	l, err := net.Listen("tcp", address)
-	if nil != err {
-		log.Fatalf("fail to bind address to %d; err: %v", port, err)
-	}
-	defer l.Close()
-
-	for {
-		conn, err := l.Accept()
-		if nil != err {
-			log.Printf("fail to accept; err: %v", err)
-			continue
-		}
-
-		log.Printf("connected client, %s", conn.RemoteAddr())
-		go connHandler(conn)
-	}
-}
-
 func connHandler(conn net.Conn) {
 	for {
 		conn.SetReadDeadline(time.Now().Add(time.Second * 10))
@@ -214,11 +189,22 @@ func connHandler(conn net.Conn) {
 			if io.EOF == err {
 				break
 			}
+			_, ok := err.(*readHeaderError)
+			if ok {
+				time.Sleep(time.Second * 1)
+				break
+			}
 
-			fmt.Println(err)
+			serr, ok := err.(net.Error)
+			if ok && !serr.Timeout() {
+				break
+			}
+
+			fmt.Println("error: ", err)
+			time.Sleep(time.Second * 1)
+
 			continue
 		}
-
 		switch messageHeader.messageType {
 		case mtProtobuf:
 			msg, err := recvProtobufBody(conn, *messageHeader)
@@ -227,9 +213,7 @@ func connHandler(conn net.Conn) {
 					break
 				}
 			}
-
 			callbackProtoMsg(conn, msg)
-
 		case mtRawbyte:
 			body, err := recvRawBody(conn, *messageHeader)
 			if nil != err {
@@ -237,26 +221,8 @@ func connHandler(conn net.Conn) {
 					break
 				}
 			}
-
 			callbackRawbyte(conn, messageHeader.packetType, body)
-
 		default:
-
 		}
-
 	}
-
-	log.Printf("disconnected client, %s", conn.RemoteAddr())
-}
-
-// Conn ...
-func Conn(ip string, port int) net.Conn {
-	addr := ip + ":" + strconv.Itoa(port)
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	go connHandler(conn)
-	return conn
 }
