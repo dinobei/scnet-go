@@ -1,7 +1,6 @@
 package scnet
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"time"
@@ -200,7 +199,6 @@ func connHandler(conn net.Conn) {
 				break
 			}
 
-			fmt.Println("error: ", err)
 			time.Sleep(time.Second * 1)
 
 			continue
