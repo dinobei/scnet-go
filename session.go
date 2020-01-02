@@ -77,6 +77,9 @@ func recvHeader(conn net.Conn) (header *messageHeader, err error) {
 
 func recvRawBody(conn net.Conn, header messageHeader) ([]byte, error) {
 	responseSize := int(header.dataSize)
+	if responseSize == 0 {
+		return nil, nil
+	}
 
 	buf := make([]byte, responseSize)
 	tmp := make([]byte, responseSize)
@@ -97,35 +100,37 @@ func recvRawBody(conn net.Conn, header messageHeader) ([]byte, error) {
 }
 
 func recvProtobufBody(conn net.Conn, header messageHeader) (proto.Message, error) {
-	responseSize := int(header.dataSize)
-
-	buf := make([]byte, 0, responseSize)
-	tmp := make([]byte, responseSize)
-
-	for {
-		n, err := conn.Read(tmp)
-		if nil != err {
-			return nil, err
-		}
-
-		buf = append(buf, tmp[:n]...)
-		if len(buf) >= responseSize {
-			break
-		}
-	}
-
 	msg := makeInstance(header.packetType)
 	if msg == nil {
 		println("unknown protobuf packet")
 		return nil, &unknownProtobufPacketError{}
 	}
-
 	field := msg.(proto.Message)
 
-	err := proto.Unmarshal(buf, field)
-	if err != nil {
-		return nil, err
+	responseSize := int(header.dataSize)
+	if responseSize > 0 {
+		buf := make([]byte, 0, responseSize)
+		tmp := make([]byte, responseSize)
+
+		for {
+			n, err := conn.Read(tmp)
+			if nil != err {
+				return nil, err
+			}
+
+			buf = append(buf, tmp[:n]...)
+			if len(buf) >= responseSize {
+				break
+			}
+		}
+
+		err := proto.Unmarshal(buf, field)
+		if err != nil {
+			return nil, err
+		}
+
 	}
+
 	return field, nil
 }
 
