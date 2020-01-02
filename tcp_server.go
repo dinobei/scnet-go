@@ -33,6 +33,8 @@ func (s TCPServer) Start(port int) {
 	}
 	defer l.Close()
 
+	s.clients = make(map[string]net.Conn)
+
 	tcplistener := l.(*net.TCPListener)
 	defer tcplistener.Close()
 
