@@ -11,6 +11,7 @@ import (
 type TCPServer struct {
 	address  string
 	Delegate TCPServerDelegate
+	clients  map[string]net.Conn
 }
 
 // TCPServerDelegate ...
@@ -49,6 +50,7 @@ func (s TCPServer) Start(port int) {
 		}
 		defer conn.Close()
 
+		s.clients[conn.RemoteAddr().String()] = conn
 		s.Delegate.ClientConnected(conn)
 		go s.handler(conn)
 	}
@@ -59,4 +61,12 @@ func (s TCPServer) Start(port int) {
 func (s TCPServer) handler(conn net.Conn) {
 	connHandler(conn)
 	s.Delegate.ClientDisconnected(conn)
+	delete(s.clients, conn.RemoteAddr().String())
+}
+
+func (s TCPServer) GetClient(address string) (net.Conn, bool) {
+	if val, ok := s.clients[address]; ok {
+		return val, true
+	}
+	return nil, false
 }
