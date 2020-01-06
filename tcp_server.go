@@ -28,7 +28,10 @@ func (s TCPServer) Start(port int) {
 	s.address = ":" + strconv.Itoa(port)
 
 	l, err := net.Listen("tcp", s.address)
-	s.Delegate.ServerStarted(l.Addr().String())
+	if s.Delegate.ServerStarted != nil {
+		s.Delegate.ServerStarted(l.Addr().String())
+	}
+
 	if nil != err {
 		log.Fatalf("fail to bind address to %d; err: %v", port, err)
 	}
@@ -63,16 +66,26 @@ func (s TCPServer) Start(port int) {
 		peer.Ping = time.Now()
 
 		clients[conn.RemoteAddr().String()] = peer
-		s.Delegate.ClientConnected(*peer)
+
+		if s.Delegate.ClientConnected != nil {
+			s.Delegate.ClientConnected(*peer)
+		}
+
 		go s.handler(peer)
 	}
 
-	s.Delegate.ServerStopped()
+	if s.Delegate.ServerStopped != nil {
+		s.Delegate.ServerStopped()
+	}
 }
 
 func (s TCPServer) handler(peer *Peer) {
 	connHandler(peer)
-	s.Delegate.ClientDisconnected(*peer)
+
+	if s.Delegate.ClientDisconnected != nil {
+		s.Delegate.ClientDisconnected(*peer)
+	}
+
 	delete(clients, peer.conn.RemoteAddr().String())
 	peer.conn.Close()
 }
