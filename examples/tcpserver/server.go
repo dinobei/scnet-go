@@ -27,6 +27,7 @@ func main() {
 	server.Delegate.ServerStarted = func(addr string) {
 		log.Println("Server started")
 	}
+
 	server.Delegate.ServerStopped = func() {
 		log.Println("Server stopped")
 	}
@@ -34,6 +35,7 @@ func main() {
 	server.Delegate.ClientConnected = func(peer scnet.Peer) {
 		log.Println("Client connected,", peer.GetRemoteAddr())
 	}
+
 	server.Delegate.ClientDisconnected = func(peer scnet.Peer) {
 		log.Println("Client disconnected,", peer.GetRemoteAddr())
 	}
@@ -46,52 +48,58 @@ func onPacket1(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet1)
 	log.Println("onPacket1() called, ", message.Number)
 
-	scnet.SendProtobuf(*peer, message)
+	scnet.Send(*peer, message)
 }
 
 func onPacket2(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet2)
 	log.Println("onPacket2() called, ", message.Str)
 
-	scnet.SendProtobuf(*peer, message)
+	scnet.Send(*peer, message)
 }
 
 func onPacket3(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet3)
 	log.Println("onPacket3() called, ", message.BoolValue)
 
-	scnet.SendProtobuf(*peer, message)
+	scnet.Send(*peer, message)
 }
 
 func onPacket4(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet4)
 	log.Println("onPacket4() called, ", message.FloatValue, message.DoubleValue)
 
-	scnet.SendProtobuf(*peer, message)
+	scnet.Send(*peer, message)
 }
 
 func onArrayMessage(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.ArrayMessage)
 	log.Println("onArrayMessage() called, ", message)
 
-	scnet.SendProtobuf(*peer, message)
+	scnet.Send(*peer, message)
 }
 
 func onImageRequest(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.ImageRequest)
 	log.Println("onImageRequest() called, ", message)
 
-	scnet.SendProtobuf(*peer, message)
+	scnet.Send(*peer, message)
 }
 
 func onRawbyte1(peer *scnet.Peer, buf []byte) {
 	log.Printf("onRawbyte1() called, %s\n", buf)
 
-	scnet.Send(*peer, 0, buf)
+	data := scnet.RawbyteData{}
+	data.PacketType = 0
+	data.Buffer = buf
+	scnet.Send(*peer, data)
 }
 
 func onRawbyte2(peer *scnet.Peer, buf []byte) {
 	log.Printf("onRawbyte2() called, %s\n", buf)
 
-	scnet.Send(*peer, 1, buf)
+	data := scnet.RawbyteData{}
+	data.PacketType = 1
+	data.Buffer = buf
+	scnet.Send(*peer, data)
 }

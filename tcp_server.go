@@ -80,14 +80,16 @@ func (s TCPServer) Start(port int) {
 }
 
 func (s TCPServer) handler(peer *Peer) {
-	connHandler(peer)
+	connHandler(peer, s.CheckPeer)
 
 	if s.Delegate.ClientDisconnected != nil {
 		s.Delegate.ClientDisconnected(*peer)
 	}
 
 	delete(clients, peer.conn.RemoteAddr().String())
-	peer.conn.Close()
+
+	time.Sleep(time.Second * 3)
+	defer peer.conn.Close()
 }
 
 // GetClient ...
@@ -96,4 +98,15 @@ func (s TCPServer) GetClient(address string) (*Peer, bool) {
 		return val, true
 	}
 	return nil, false
+}
+
+// CheckPeer ...
+func (s TCPServer) CheckPeer(peer *Peer) bool {
+
+	current := time.Now()
+	if current.Sub(peer.Ping).Seconds() > 15 {
+		return false
+	}
+
+	return true
 }

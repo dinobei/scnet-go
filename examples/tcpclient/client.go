@@ -39,7 +39,7 @@ func main() {
 			for {
 				pkt1 := &example.Packet1{}
 				pkt1.Number = int32(rand.Intn(1000))
-				err := scnet.SendProtobuf(peer, pkt1)
+				err := scnet.Send(peer, pkt1)
 				if err != nil {
 					break
 				}
@@ -47,7 +47,7 @@ func main() {
 
 				pkt2 := &example.Packet2{}
 				pkt2.Str = "Hello World"
-				err = scnet.SendProtobuf(peer, pkt2)
+				err = scnet.Send(peer, pkt2)
 				if err != nil {
 					break
 				}
@@ -55,7 +55,7 @@ func main() {
 
 				pkt3 := &example.Packet3{}
 				pkt3.BoolValue = true
-				err = scnet.SendProtobuf(peer, pkt3)
+				err = scnet.Send(peer, pkt3)
 				if err != nil {
 					break
 				}
@@ -64,7 +64,7 @@ func main() {
 				pkt4 := &example.Packet4{}
 				pkt4.DoubleValue = 1.1
 				pkt4.FloatValue = 2.2
-				err = scnet.SendProtobuf(peer, pkt4)
+				err = scnet.Send(peer, pkt4)
 				if err != nil {
 					break
 				}
@@ -73,7 +73,7 @@ func main() {
 				arrayMessage := &example.ArrayMessage{}
 				arrayMessage.StrArr = append(arrayMessage.StrArr, "sample1")
 				arrayMessage.StrArr = append(arrayMessage.StrArr, "sample2")
-				err = scnet.SendProtobuf(peer, arrayMessage)
+				err = scnet.Send(peer, arrayMessage)
 				if err != nil {
 					break
 				}
@@ -81,19 +81,25 @@ func main() {
 
 				imgReq := &example.ImageRequest{}
 				imgReq.Name = "test.jpg"
-				err = scnet.SendProtobuf(peer, imgReq)
+				err = scnet.Send(peer, imgReq)
 				if err != nil {
 					break
 				}
 				time.Sleep(time.Second * 1)
 
-				err = scnet.Send(peer, 0, []byte("raw packet (type 0)"))
+				data0 := scnet.RawbyteData{}
+				data0.PacketType = 0
+				data0.Buffer = []byte("raw pakcet (type 0)")
+				err = scnet.Send(peer, data0)
 				if err != nil {
 					break
 				}
 				time.Sleep(time.Second * 1)
 
-				err = scnet.Send(peer, 1, []byte("raw packet (type 1)"))
+				data1 := scnet.RawbyteData{}
+				data1.PacketType = 1
+				data1.Buffer = []byte("raw pakcet (type 1)")
+				err = scnet.Send(peer, data1)
 				if err != nil {
 					break
 				}

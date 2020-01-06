@@ -61,7 +61,7 @@ func (c *TCPClient) Attach(ip string, port int, timeout time.Duration) {
 			c.Delegate.Connected(*peer)
 		}
 
-		connHandler(peer)
+		connHandler(peer, nil)
 		if c.Delegate.Disconnected != nil {
 			c.Delegate.Disconnected(*peer)
 		}

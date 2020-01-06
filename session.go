@@ -20,6 +20,12 @@ func (m *unknownProtobufPacketError) Error() string {
 	return "unknown protobuf packet"
 }
 
+type notSupportedDataError struct{}
+
+func (m *notSupportedDataError) Error() string {
+	return "not supported data"
+}
+
 // Peer ...
 type Peer struct {
 	conn net.Conn
@@ -174,8 +180,25 @@ func makeHeader(messageType int32, packetType int32, dataSize int) []byte {
 	return buffer
 }
 
-// SendProtobuf ...
-func SendProtobuf(peer Peer, message proto.Message) error {
+// RawbyteData ...
+type RawbyteData struct {
+	PacketType int32
+	Buffer     []byte
+}
+
+// Send ...
+func Send(peer Peer, data interface{}) error {
+	if casted, ok := data.(proto.Message); ok {
+		return sendProtobuf(peer, casted)
+	} else if casted, ok := data.(RawbyteData); ok {
+		return sendRawByte(peer, casted.PacketType, casted.Buffer)
+	}
+
+	return &notSupportedDataError{}
+
+}
+
+func sendProtobuf(peer Peer, message proto.Message) error {
 	packetType := getPacketType(proto.MessageName(message))
 
 	buffer := makeHeader(mtProtobuf, packetType, proto.Size(message))
@@ -195,8 +218,7 @@ func SendProtobuf(peer Peer, message proto.Message) error {
 	return nil
 }
 
-// Send ...
-func Send(peer Peer, packetType int32, data []byte) error {
+func sendRawByte(peer Peer, packetType int32, data []byte) error {
 	buffer := makeHeader(mtRawbyte, packetType, len(data))
 	buffer = append(buffer, data[:]...)
 
@@ -208,7 +230,7 @@ func Send(peer Peer, packetType int32, data []byte) error {
 	return nil
 }
 
-func connHandler(peer *Peer) {
+func connHandler(peer *Peer, checkPeerFunc func(*Peer) bool) {
 	for {
 		peer.conn.SetReadDeadline(time.Now().Add(time.Second * 10))
 		messageHeader, err := recvHeader(peer.conn)
@@ -227,10 +249,16 @@ func connHandler(peer *Peer) {
 				break
 			}
 
-			time.Sleep(time.Second * 1)
+			if checkPeerFunc != nil {
+				if !checkPeerFunc(peer) {
+					break
+				}
+			}
 
 			continue
 		}
+
+		peer.Ping = time.Now()
 
 		switch messageHeader.messageType {
 		case mtProtobuf:
