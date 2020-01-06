@@ -24,6 +24,7 @@ func main() {
 	scnet.RegistProtoMessage(5, example.ImageRequest{}, onImageRequest)
 	scnet.RegistRawbyte(0, onRawbyte1)
 	scnet.RegistRawbyte(1, onRawbyte2)
+	scnet.RegistRawbyte(2, onPing)
 
 	client := scnet.TCPClient{}
 	client.Delegate.Attached = func() {
@@ -31,6 +32,12 @@ func main() {
 	}
 	client.Delegate.Detached = func() {
 		log.Println("Detached")
+	}
+	client.Delegate.TimedOut = func(peer *scnet.Peer) bool {
+		ping := scnet.RawbyteData{}
+		ping.PacketType = 2
+		scnet.Send(*peer, ping)
+		return true
 	}
 	client.Delegate.Connected = func(peer scnet.Peer) {
 		log.Println("Connected, ", peer.GetRemoteAddr())
@@ -158,4 +165,8 @@ func onRawbyte1(peer *scnet.Peer, buf []byte) {
 
 func onRawbyte2(peer *scnet.Peer, buf []byte) {
 	log.Printf("onRawbyte2() called, %s\n", buf)
+}
+
+func onPing(peer *scnet.Peer, buf []byte) {
+	log.Printf("onPing() called")
 }

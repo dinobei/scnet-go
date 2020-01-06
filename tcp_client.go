@@ -22,6 +22,7 @@ type TCPClient struct {
 type TCPClientDelegate struct {
 	Attached     func()
 	Detached     func()
+	TimedOut     func(*Peer) bool
 	Connected    func(Peer)
 	Connecting   func(string)
 	Disconnected func(Peer)
@@ -61,7 +62,7 @@ func (c *TCPClient) Attach(ip string, port int, timeout time.Duration) {
 			c.Delegate.Connected(*peer)
 		}
 
-		connHandler(peer, nil)
+		connHandler(peer, c.Delegate.TimedOut)
 		if c.Delegate.Disconnected != nil {
 			c.Delegate.Disconnected(*peer)
 		}

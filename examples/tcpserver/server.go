@@ -21,6 +21,7 @@ func main() {
 	scnet.RegistProtoMessage(5, example.ImageRequest{}, onImageRequest)
 	scnet.RegistRawbyte(0, onRawbyte1)
 	scnet.RegistRawbyte(1, onRawbyte2)
+	scnet.RegistRawbyte(2, onPing)
 
 	// go scnet.Start(*port)
 	server := scnet.TCPServer{}
@@ -84,6 +85,12 @@ func onImageRequest(peer *scnet.Peer, data interface{}) {
 	log.Println("onImageRequest() called, ", message)
 
 	scnet.Send(*peer, message)
+}
+
+func onPing(peer *scnet.Peer, buf []byte) {
+	data := scnet.RawbyteData{}
+	data.PacketType = 2
+	scnet.Send(*peer, data)
 }
 
 func onRawbyte1(peer *scnet.Peer, buf []byte) {
