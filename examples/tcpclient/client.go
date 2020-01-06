@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/dinobei/scnet-go"
-	"github.com/dinobei/scnet-go/examples/example"
 	"log"
 	"math/rand"
-	"net"
 	"time"
+
+	"github.com/dinobei/scnet-go"
+	"github.com/dinobei/scnet-go/examples/example"
 )
 
 func main() {
@@ -32,14 +32,14 @@ func main() {
 	client.Delegate.Detached = func() {
 		log.Println("Detached")
 	}
-	client.Delegate.Connected = func(conn net.Conn) {
-		log.Println("Connected, ", conn.RemoteAddr())
+	client.Delegate.Connected = func(peer scnet.Peer) {
+		log.Println("Connected, ", peer.GetRemoteAddr())
 
 		go func() {
 			for {
 				pkt1 := &example.Packet1{}
 				pkt1.Number = int32(rand.Intn(1000))
-				err := scnet.SendProtobuf(conn, pkt1)
+				err := scnet.SendProtobuf(peer, pkt1)
 				if err != nil {
 					break
 				}
@@ -47,7 +47,7 @@ func main() {
 
 				pkt2 := &example.Packet2{}
 				pkt2.Str = "Hello World"
-				err = scnet.SendProtobuf(conn, pkt2)
+				err = scnet.SendProtobuf(peer, pkt2)
 				if err != nil {
 					break
 				}
@@ -55,7 +55,7 @@ func main() {
 
 				pkt3 := &example.Packet3{}
 				pkt3.BoolValue = true
-				err = scnet.SendProtobuf(conn, pkt3)
+				err = scnet.SendProtobuf(peer, pkt3)
 				if err != nil {
 					break
 				}
@@ -64,7 +64,7 @@ func main() {
 				pkt4 := &example.Packet4{}
 				pkt4.DoubleValue = 1.1
 				pkt4.FloatValue = 2.2
-				err = scnet.SendProtobuf(conn, pkt4)
+				err = scnet.SendProtobuf(peer, pkt4)
 				if err != nil {
 					break
 				}
@@ -73,7 +73,7 @@ func main() {
 				arrayMessage := &example.ArrayMessage{}
 				arrayMessage.StrArr = append(arrayMessage.StrArr, "sample1")
 				arrayMessage.StrArr = append(arrayMessage.StrArr, "sample2")
-				err = scnet.SendProtobuf(conn, arrayMessage)
+				err = scnet.SendProtobuf(peer, arrayMessage)
 				if err != nil {
 					break
 				}
@@ -81,19 +81,19 @@ func main() {
 
 				imgReq := &example.ImageRequest{}
 				imgReq.Name = "test.jpg"
-				err = scnet.SendProtobuf(conn, imgReq)
+				err = scnet.SendProtobuf(peer, imgReq)
 				if err != nil {
 					break
 				}
 				time.Sleep(time.Second * 1)
 
-				err = scnet.Send(conn, 0, []byte("raw packet (type 0)"))
+				err = scnet.Send(peer, 0, []byte("raw packet (type 0)"))
 				if err != nil {
 					break
 				}
 				time.Sleep(time.Second * 1)
 
-				err = scnet.Send(conn, 1, []byte("raw packet (type 1)"))
+				err = scnet.Send(peer, 1, []byte("raw packet (type 1)"))
 				if err != nil {
 					break
 				}
@@ -105,8 +105,8 @@ func main() {
 	client.Delegate.Connecting = func(address string) {
 		log.Println("Connecting...", address)
 	}
-	client.Delegate.Disconnected = func(conn net.Conn) {
-		log.Println("Disconnected, ", conn.RemoteAddr())
+	client.Delegate.Disconnected = func(peer scnet.Peer) {
+		log.Println("Disconnected, ", peer.GetRemoteAddr())
 	}
 
 	go client.Attach(*ip, *port, time.Second*5)
@@ -116,40 +116,40 @@ func main() {
 	fmt.Scanln()
 }
 
-func onPacket1(conn net.Conn, data interface{}) {
+func onPacket1(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet1)
 	log.Println("onPacket1() called, ", message.Number)
 }
 
-func onPacket2(conn net.Conn, data interface{}) {
+func onPacket2(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet2)
 	log.Println("onPacket2() called, ", message.Str)
 }
 
-func onPacket3(conn net.Conn, data interface{}) {
+func onPacket3(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet3)
 	log.Println("onPacket3() called, ", message.BoolValue)
 }
 
-func onPacket4(conn net.Conn, data interface{}) {
+func onPacket4(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet4)
 	log.Println("onPacket4() called, ", message.FloatValue, message.DoubleValue)
 }
 
-func onArrayMessage(conn net.Conn, data interface{}) {
+func onArrayMessage(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.ArrayMessage)
 	log.Println("onArrayMessage() called, ", message)
 }
 
-func onImageRequest(conn net.Conn, data interface{}) {
+func onImageRequest(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.ImageRequest)
 	log.Println("onImageRequest() called, ", message)
 }
 
-func onRawbyte1(conn net.Conn, buf []byte) {
+func onRawbyte1(peer *scnet.Peer, buf []byte) {
 	log.Printf("onRawbyte1() called, %s\n", buf)
 }
 
-func onRawbyte2(conn net.Conn, buf []byte) {
+func onRawbyte2(peer *scnet.Peer, buf []byte) {
 	log.Printf("onRawbyte2() called, %s\n", buf)
 }

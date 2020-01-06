@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var clients map[string]net.Conn
+var clients map[string]*Peer
 
 // TCPServer ...
 type TCPServer struct {
@@ -17,10 +17,10 @@ type TCPServer struct {
 
 // TCPServerDelegate ...
 type TCPServerDelegate struct {
-	ServerStarted      func(net.Listener)
+	ServerStarted      func(string)
 	ServerStopped      func()
-	ClientConnected    func(net.Conn)
-	ClientDisconnected func(net.Conn)
+	ClientConnected    func(Peer)
+	ClientDisconnected func(Peer)
 }
 
 // Start ...
@@ -28,13 +28,13 @@ func (s TCPServer) Start(port int) {
 	s.address = ":" + strconv.Itoa(port)
 
 	l, err := net.Listen("tcp", s.address)
-	s.Delegate.ServerStarted(l)
+	s.Delegate.ServerStarted(l.Addr().String())
 	if nil != err {
 		log.Fatalf("fail to bind address to %d; err: %v", port, err)
 	}
 	defer l.Close()
 
-	clients = make(map[string]net.Conn)
+	clients = make(map[string]*Peer)
 
 	tcplistener := l.(*net.TCPListener)
 	defer tcplistener.Close()
@@ -53,21 +53,32 @@ func (s TCPServer) Start(port int) {
 		}
 		defer conn.Close()
 
-		clients[conn.RemoteAddr().String()] = conn
-		s.Delegate.ClientConnected(conn)
-		go s.handler(conn)
+		var peer *Peer
+		if p, ok := clients[conn.RemoteAddr().String()]; ok {
+			peer = p
+		} else {
+			peer = &Peer{}
+			peer.conn = conn
+		}
+		peer.Ping = time.Now()
+
+		clients[conn.RemoteAddr().String()] = peer
+		s.Delegate.ClientConnected(*peer)
+		go s.handler(peer)
 	}
 
 	s.Delegate.ServerStopped()
 }
 
-func (s TCPServer) handler(conn net.Conn) {
-	connHandler(conn)
-	s.Delegate.ClientDisconnected(conn)
-	delete(clients, conn.RemoteAddr().String())
+func (s TCPServer) handler(peer *Peer) {
+	connHandler(peer)
+	s.Delegate.ClientDisconnected(*peer)
+	delete(clients, peer.conn.RemoteAddr().String())
+	peer.conn.Close()
 }
 
-func (s TCPServer) GetClient(address string) (net.Conn, bool) {
+// GetClient ...
+func (s TCPServer) GetClient(address string) (*Peer, bool) {
 	if val, ok := clients[address]; ok {
 		return val, true
 	}

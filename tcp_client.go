@@ -22,9 +22,9 @@ type TCPClient struct {
 type TCPClientDelegate struct {
 	Attached     func()
 	Detached     func()
-	Connected    func(net.Conn)
+	Connected    func(Peer)
 	Connecting   func(string)
-	Disconnected func(net.Conn)
+	Disconnected func(Peer)
 }
 
 // Attach ...
@@ -35,6 +35,7 @@ func (c *TCPClient) Attach(ip string, port int, timeout time.Duration) {
 		c.Delegate.Attached()
 	}
 
+	peer := &Peer{}
 	for {
 		c.mutex.RLock()
 		if c.isStop {
@@ -54,13 +55,15 @@ func (c *TCPClient) Attach(ip string, port int, timeout time.Duration) {
 			continue
 		}
 
+		peer.conn = c.conn
+
 		if c.Delegate.Connected != nil {
-			c.Delegate.Connected(c.conn)
+			c.Delegate.Connected(*peer)
 		}
 
-		connHandler(c.conn)
+		connHandler(peer)
 		if c.Delegate.Disconnected != nil {
-			c.Delegate.Disconnected(c.conn)
+			c.Delegate.Disconnected(*peer)
 		}
 
 		c.conn.Close()

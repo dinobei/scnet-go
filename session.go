@@ -20,6 +20,29 @@ func (m *unknownProtobufPacketError) Error() string {
 	return "unknown protobuf packet"
 }
 
+// Peer ...
+type Peer struct {
+	conn net.Conn
+	Ping time.Time
+}
+
+// GetRemoteAddr ...
+func (peer Peer) GetRemoteAddr() string {
+	return peer.conn.RemoteAddr().String()
+}
+
+// GetLocalAddr ...
+func (peer Peer) GetLocalAddr() string {
+	return peer.conn.LocalAddr().String()
+}
+
+// GetFormattedPing ...
+func (peer Peer) GetFormattedPing() string {
+	loc, _ := time.LoadLocation("Asia/Seoul")
+	kst := peer.Ping.In(loc)
+	return kst.Format("2006-01-02 15:04:05")
+}
+
 func recvHeader(conn net.Conn) (header *messageHeader, err error) {
 	data := make([]byte, 2)
 	n, err := conn.Read(data)
@@ -152,7 +175,7 @@ func makeHeader(messageType int32, packetType int32, dataSize int) []byte {
 }
 
 // SendProtobuf ...
-func SendProtobuf(conn net.Conn, message proto.Message) error {
+func SendProtobuf(peer Peer, message proto.Message) error {
 	packetType := getPacketType(proto.MessageName(message))
 
 	buffer := makeHeader(mtProtobuf, packetType, proto.Size(message))
@@ -164,7 +187,7 @@ func SendProtobuf(conn net.Conn, message proto.Message) error {
 
 	buffer = append(buffer, data[:]...)
 
-	_, err = conn.Write(buffer)
+	_, err = peer.conn.Write(buffer)
 	if err != nil {
 		return err
 	}
@@ -173,11 +196,11 @@ func SendProtobuf(conn net.Conn, message proto.Message) error {
 }
 
 // Send ...
-func Send(conn net.Conn, packetType int32, data []byte) error {
+func Send(peer Peer, packetType int32, data []byte) error {
 	buffer := makeHeader(mtRawbyte, packetType, len(data))
 	buffer = append(buffer, data[:]...)
 
-	_, err := conn.Write(buffer)
+	_, err := peer.conn.Write(buffer)
 	if err != nil {
 		return err
 	}
@@ -185,10 +208,10 @@ func Send(conn net.Conn, packetType int32, data []byte) error {
 	return nil
 }
 
-func connHandler(conn net.Conn) {
+func connHandler(peer *Peer) {
 	for {
-		conn.SetReadDeadline(time.Now().Add(time.Second * 10))
-		messageHeader, err := recvHeader(conn)
+		peer.conn.SetReadDeadline(time.Now().Add(time.Second * 10))
+		messageHeader, err := recvHeader(peer.conn)
 		if nil != err {
 			if io.EOF == err {
 				break
@@ -208,23 +231,24 @@ func connHandler(conn net.Conn) {
 
 			continue
 		}
+
 		switch messageHeader.messageType {
 		case mtProtobuf:
-			msg, err := recvProtobufBody(conn, *messageHeader)
+			msg, err := recvProtobufBody(peer.conn, *messageHeader)
 			if nil != err {
 				if io.EOF == err {
 					break
 				}
 			}
-			callbackProtoMsg(conn, msg)
+			callbackProtoMsg(peer, msg)
 		case mtRawbyte:
-			body, err := recvRawBody(conn, *messageHeader)
+			body, err := recvRawBody(peer.conn, *messageHeader)
 			if nil != err {
 				if io.EOF == err {
 					break
 				}
 			}
-			callbackRawbyte(conn, messageHeader.packetType, body)
+			callbackRawbyte(peer, messageHeader.packetType, body)
 		default:
 		}
 	}

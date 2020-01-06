@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 
 	"github.com/dinobei/scnet-go"
 	"github.com/dinobei/scnet-go/examples/example"
@@ -25,74 +24,74 @@ func main() {
 
 	// go scnet.Start(*port)
 	server := scnet.TCPServer{}
-	server.Delegate.ServerStarted = func(listener net.Listener) {
+	server.Delegate.ServerStarted = func(addr string) {
 		log.Println("Server started")
 	}
 	server.Delegate.ServerStopped = func() {
 		log.Println("Server stopped")
 	}
 
-	server.Delegate.ClientConnected = func(conn net.Conn) {
-		log.Println("Client connected,", conn.RemoteAddr())
+	server.Delegate.ClientConnected = func(peer scnet.Peer) {
+		log.Println("Client connected,", peer.GetRemoteAddr())
 	}
-	server.Delegate.ClientDisconnected = func(conn net.Conn) {
-		log.Println("Client disconnected,", conn.RemoteAddr())
+	server.Delegate.ClientDisconnected = func(peer scnet.Peer) {
+		log.Println("Client disconnected,", peer.GetRemoteAddr())
 	}
 
 	server.Start(*port)
 	fmt.Scanln()
 }
 
-func onPacket1(conn net.Conn, data interface{}) {
+func onPacket1(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet1)
 	log.Println("onPacket1() called, ", message.Number)
 
-	scnet.SendProtobuf(conn, message)
+	scnet.SendProtobuf(*peer, message)
 }
 
-func onPacket2(conn net.Conn, data interface{}) {
+func onPacket2(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet2)
 	log.Println("onPacket2() called, ", message.Str)
 
-	scnet.SendProtobuf(conn, message)
+	scnet.SendProtobuf(*peer, message)
 }
 
-func onPacket3(conn net.Conn, data interface{}) {
+func onPacket3(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet3)
 	log.Println("onPacket3() called, ", message.BoolValue)
 
-	scnet.SendProtobuf(conn, message)
+	scnet.SendProtobuf(*peer, message)
 }
 
-func onPacket4(conn net.Conn, data interface{}) {
+func onPacket4(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.Packet4)
 	log.Println("onPacket4() called, ", message.FloatValue, message.DoubleValue)
 
-	scnet.SendProtobuf(conn, message)
+	scnet.SendProtobuf(*peer, message)
 }
 
-func onArrayMessage(conn net.Conn, data interface{}) {
+func onArrayMessage(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.ArrayMessage)
 	log.Println("onArrayMessage() called, ", message)
 
-	scnet.SendProtobuf(conn, message)
+	scnet.SendProtobuf(*peer, message)
 }
 
-func onImageRequest(conn net.Conn, data interface{}) {
+func onImageRequest(peer *scnet.Peer, data interface{}) {
 	message := data.(*example.ImageRequest)
 	log.Println("onImageRequest() called, ", message)
 
-	scnet.SendProtobuf(conn, message)
+	scnet.SendProtobuf(*peer, message)
 }
 
-func onRawbyte1(conn net.Conn, buf []byte) {
+func onRawbyte1(peer *scnet.Peer, buf []byte) {
 	log.Printf("onRawbyte1() called, %s\n", buf)
 
-	scnet.Send(conn, 0, buf)
+	scnet.Send(*peer, 0, buf)
 }
 
-func onRawbyte2(conn net.Conn, buf []byte) {
+func onRawbyte2(peer *scnet.Peer, buf []byte) {
 	log.Printf("onRawbyte2() called, %s\n", buf)
 
-	scnet.Send(conn, 1, buf)
+	scnet.Send(*peer, 1, buf)
 }

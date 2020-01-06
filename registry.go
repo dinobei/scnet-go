@@ -2,7 +2,6 @@ package scnet
 
 import (
 	"fmt"
-	"net"
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
@@ -10,15 +9,15 @@ import (
 
 // reference: https://stackoverflow.com/a/23031445
 var typeRegistry = make(map[int32]reflect.Type)
-var funcRegistry = make(map[string]func(net.Conn, interface{}))
+var funcRegistry = make(map[string]func(*Peer, interface{}))
 var packetTypeRegistry = make(map[string]int32)
 
-var funcRawRegistry = make(map[int32]func(net.Conn, []byte))
+var funcRawRegistry = make(map[int32]func(*Peer, []byte))
 
 var protoMessageTypes []interface{}
 
 // RegistProtoMessage ...
-func RegistProtoMessage(packetType int32, message interface{}, f func(net.Conn, interface{})) {
+func RegistProtoMessage(packetType int32, message interface{}, f func(*Peer, interface{})) {
 	typeRegistry[packetType] = reflect.TypeOf(message)
 	funcRegistry[fmt.Sprintf("%T", message)] = f
 	packetTypeRegistry[fmt.Sprintf("%T", message)] = packetType
@@ -26,7 +25,7 @@ func RegistProtoMessage(packetType int32, message interface{}, f func(net.Conn, 
 }
 
 // RegistRawbyte ...
-func RegistRawbyte(packetType int32, f func(net.Conn, []byte)) {
+func RegistRawbyte(packetType int32, f func(*Peer, []byte)) {
 	funcRawRegistry[packetType] = f
 }
 
@@ -42,13 +41,13 @@ func makeInstance(messageType int32) interface{} {
 
 // callbackProtoMsg ...
 // reference: https://stackoverflow.com/a/39144290
-func callbackProtoMsg(conn net.Conn, msg proto.Message) bool {
+func callbackProtoMsg(peer *Peer, msg proto.Message) bool {
 	for _, data := range protoMessageTypes {
 		if proto.MessageName(msg) == reflect.TypeOf(data).String() {
 			name := fmt.Sprintf("%T", data)
 			f := funcRegistry[name]
 			if f != nil {
-				f(conn, msg)
+				f(peer, msg)
 			}
 
 			return true
@@ -59,13 +58,13 @@ func callbackProtoMsg(conn net.Conn, msg proto.Message) bool {
 }
 
 // callbackRawbyte ...
-func callbackRawbyte(conn net.Conn, packetType int32, buf []byte) bool {
+func callbackRawbyte(peer *Peer, packetType int32, buf []byte) bool {
 	f := funcRawRegistry[packetType]
 	if f == nil {
 		return false
 	}
 
-	f(conn, buf)
+	f(peer, buf)
 	return true
 }
 
