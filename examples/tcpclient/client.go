@@ -18,9 +18,9 @@ func main() {
 	flag.Parse()
 
 	client := scnet.NewTCPClient()
-	client.RegistMessage(uint32(example.PacketType_dummyPacket1), example.DummyPacket1{}, onDummyPacket1)
-	client.RegistMessage(uint32(example.PacketType_dummyPacket2), example.DummyPacket2{}, onDummyPacket2)
-	client.RegistMessage(uint32(example.PacketType_ping), example.Ping{}, onPing)
+	client.RegistMessage(example.DummyPacket1{}, onDummyPacket1)
+	client.RegistMessage(example.DummyPacket2{}, onDummyPacket2)
+	client.RegistMessage(example.Ping{}, onPing)
 	client.Delegate.Attached = func() {
 		log.Println("Attached")
 	}

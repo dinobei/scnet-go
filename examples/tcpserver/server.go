@@ -18,9 +18,9 @@ func main() {
 	flag.Parse()
 
 	server = scnet.TCPServer{}
-	server.RegistMessage(uint32(example.PacketType_dummyPacket1), example.DummyPacket1{}, onDummyPacket1)
-	server.RegistMessage(uint32(example.PacketType_dummyPacket2), example.DummyPacket2{}, onDummyPacket2)
-	server.RegistMessage(uint32(example.PacketType_ping), example.Ping{}, onPing)
+	server.RegistMessage(example.DummyPacket1{}, onDummyPacket1)
+	server.RegistMessage(example.DummyPacket2{}, onDummyPacket2)
+	server.RegistMessage(example.Ping{}, onPing)
 
 	server.Delegate.ServerStarted = func(addr string) {
 		log.Println("Server started")

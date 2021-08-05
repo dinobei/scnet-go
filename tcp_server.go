@@ -150,9 +150,13 @@ func (s TCPServer) handler(peer *Peer) {
 		}
 
 		message := makeInstance(header.PacketType)
+		if(message == nil) {
+			println("message nil")
+			break
+		}
 		bodyBuf := packetData[headerLength:packetLength]
 		if err := proto.Unmarshal(bodyBuf, message); err != nil {
-			log.Println("Failed to parse Header: ", err)
+			log.Println("Failed to parse Message: ", err)
 			break
 		}
 
@@ -188,15 +192,15 @@ func (s *TCPServer) Send(peer *Peer, header *Header, message proto.Message) {
 	if header == nil {
 		header = &Header{}
 	} else {
-		if header.ReqCb > 0 {
-			header.ResCb = header.ReqCb
-		} else {
-			header.ResCb = 0
-		}
-		header.ReqCb = 0
+		// if header.ReqCb > 0 {
+		// 	header.ResCb = header.ReqCb
+		// } else {
+		// 	header.ResCb = 0
+		// }
+		// header.ReqCb = 0
 	}
 
-	header.PacketType = getPacketType(proto.MessageName(message))
+	header.PacketType = getPacketType(message)
 
 	headerSize := proto.Size(header)
 	packetSize := proto.Size(message) + headerSize
@@ -230,6 +234,6 @@ func (s *TCPServer) Send(peer *Peer, header *Header, message proto.Message) {
 }
 
 // RegistMessage ...
-func (s *TCPServer) RegistMessage(packetType uint32, message interface{}, pcb PeerCallback) {
-	registMessageWithPeer(packetType, message, pcb)
+func (s *TCPServer) RegistMessage(message interface{}, pcb PeerCallback) {
+	registMessageWithPeer(message, pcb)
 }

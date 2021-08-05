@@ -3,6 +3,7 @@ package scnet
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -14,28 +15,24 @@ type ClientCallback func(*TCPClient, Header, proto.Message)
 type PeerCallback func(*Peer, Header, proto.Message)
 
 // reference: https://stackoverflow.com/a/23031445
-var typeRegistry = make(map[uint32]reflect.Type)
-var clientCallbackRegistry = make(map[string]ClientCallback)
-var peerCallbackRegistry = make(map[string]PeerCallback)
-var packetTypeRegistry = make(map[string]uint32)
+var typeRegistry = make(map[string]reflect.Type)
+var clientCallbackRegistry = make(map[string]ClientCallback) // TODO: used in client
+var peerCallbackRegistry = make(map[string]PeerCallback) // TODO: used in server
 
-var protoMessageTypes []interface{}
 
-func registMessage(packetType uint32, message interface{}, f ClientCallback) {
+func registMessage(message interface{}, f ClientCallback) {
+	packetType := strings.ToLower(fmt.Sprintf("%T", message))
 	typeRegistry[packetType] = reflect.TypeOf(message)
-	clientCallbackRegistry[fmt.Sprintf("%T", message)] = f
-	packetTypeRegistry[fmt.Sprintf("%T", message)] = packetType
-	protoMessageTypes = append(protoMessageTypes, message)
+	clientCallbackRegistry[packetType] = f
 }
 
-func registMessageWithPeer(packetType uint32, message interface{}, f PeerCallback) {
+func registMessageWithPeer(message interface{}, f PeerCallback) {
+	packetType := strings.ToLower(fmt.Sprintf("%T", message))
 	typeRegistry[packetType] = reflect.TypeOf(message)
-	peerCallbackRegistry[fmt.Sprintf("%T", message)] = f
-	packetTypeRegistry[fmt.Sprintf("%T", message)] = packetType
-	protoMessageTypes = append(protoMessageTypes, message)
+	peerCallbackRegistry[packetType] = f
 }
 
-func makeInstance(packetType uint32) proto.Message {
+func makeInstance(packetType string) proto.Message {
 	if typeRegistry[packetType] == nil {
 		return nil
 	}
@@ -47,38 +44,26 @@ func makeInstance(packetType uint32) proto.Message {
 
 // reference: https://stackoverflow.com/a/39144290
 func clientCallbackMessage(client *TCPClient, header Header, msg proto.Message) bool {
-	for _, data := range protoMessageTypes {
-		if proto.MessageName(msg) == reflect.TypeOf(data).String() {
-			name := fmt.Sprintf("%T", data)
-			f := clientCallbackRegistry[name]
-			if f != nil {
-				f(client, header, msg)
-			}
-
-			return true
-		}
+	f, exists := clientCallbackRegistry[getPacketType(msg)]
+	if !exists {
+		return false;
 	}
-
-	return false
+	f(client, header, msg)
+	return true
 }
 
 func peerCallbackMessage(peer *Peer, header Header, msg proto.Message) bool {
-	for _, data := range protoMessageTypes {
-		if proto.MessageName(msg) == reflect.TypeOf(data).String() {
-			name := fmt.Sprintf("%T", data)
-			f := peerCallbackRegistry[name]
-			if f != nil {
-				f(peer, header, msg)
-			}
-
-			return true
-		}
+	f, exists := peerCallbackRegistry[getPacketType(msg)]
+	if !exists {
+		return false;
 	}
-
-	return false
+	f(peer, header, msg)
+	return true
 }
 
-// getPacketType : protobuf pakcet type getter
-func getPacketType(name string) uint32 {
-	return packetTypeRegistry[name]
+func getPacketType(msg proto.Message) string {
+	var packetType = fmt.Sprintf("%T", msg)
+	packetType = strings.ToLower(packetType)
+	packetType = strings.TrimLeft(packetType, "*")
+	return packetType
 }
