@@ -48,7 +48,9 @@ func clientCallbackMessage(client *TCPClient, header Header, msg proto.Message) 
 	if !exists {
 		return false;
 	}
-	f(client, header, msg)
+	if f != nil {
+		f(client, header, msg)
+	}
 	return true
 }
 

@@ -182,25 +182,20 @@ func (s TCPServer) GetClient(address string) (*Peer, bool) {
 }
 
 // Send ...
-func (s *TCPServer) Send(peer *Peer, header *Header, message proto.Message) {
+func (s *TCPServer) Send(peer *Peer, _header *Header, message proto.Message) {
 	client := s.clients[peer.GetRemoteAddr()]
 	if client == nil {
 		log.Print("client not exist")
 		return
 	}
 
-	if header == nil {
-		header = &Header{}
-	} else {
-		// if header.ReqCb > 0 {
-		// 	header.ResCb = header.ReqCb
-		// } else {
-		// 	header.ResCb = 0
-		// }
-		// header.ReqCb = 0
+	header := &Header{}
+	if _header != nil {
+		header.ResOf = _header.Id
 	}
 
-	header.PacketType = getPacketType(message)
+	header.Id = 0
+	header.PacketType = getPacketType(message)	
 
 	headerSize := proto.Size(header)
 	packetSize := proto.Size(message) + headerSize

@@ -130,30 +130,25 @@ func (c *TCPClient) Detach() {
 }
 
 // Send ...
-func (c *TCPClient) Send(header *Header, message proto.Message, callback ClientCallback) bool {
+func (c *TCPClient) Send(_header *Header, message proto.Message, callback ClientCallback) bool {
 	if c.status != Connected {
 		return false
 	}
 
-	packetType := getPacketType(message)
-	if header == nil {
-		header = &Header{}
-	} else {
-		// if header.ReqCb > 0 {
-		// 	header.ResCb = header.ReqCb
-		// } else {
-		// 	header.ResCb = 0
-		// }
+	header := &Header{}
+	if _header != nil {
+		header.ResOf = _header.Id
 	}
 
-	header.PacketType = packetType
+	header.PacketType = getPacketType(message)
+
 	if callback != nil {
 		// set callback
-		// header.ReqCb = c.callbackKeyRef
-		// c.dedicatedCallbackMap[c.callbackKeyRef] = callback
-		// c.callbackKeyRef++
+		header.Id = c.callbackKeyRef
+		c.dedicatedCallbackMap[c.callbackKeyRef] = callback
+		c.callbackKeyRef++
 	} else {
-		// header.ReqCb = 0
+		header.Id = 0
 	}
 
 	headerSize := proto.Size(header)
@@ -264,12 +259,12 @@ func (c *TCPClient) MainLoop() {
 			return
 		}
 
-		// dedicatedCallback := c.dedicatedCallbackMap[header.ResCb]
-		// if dedicatedCallback != nil {
-		// 	dedicatedCallback(c, *header, message)
-		// } else {
-		// 	clientCallbackMessage(c, *header, message)
-		// }
+		dedicatedCallback := c.dedicatedCallbackMap[header.ResOf]
+		if dedicatedCallback != nil {
+			dedicatedCallback(c, *header, message)
+		} else {
+			clientCallbackMessage(c, *header, message)
+		}
 	}
 }
 
