@@ -36,14 +36,14 @@ func (s *TCPServer) Start(port int) {
 	s.address = ":" + strconv.Itoa(port)
 
 	l, err := net.Listen("tcp", s.address)
-	if s.Delegate.ServerStarted != nil {
-		s.Delegate.ServerStarted(l.Addr().String())
-	}
-
 	if nil != err {
 		log.Fatalf("fail to bind address to %d; err: %v", port, err)
 	}
 	defer l.Close()
+
+	if s.Delegate.ServerStarted != nil {
+		s.Delegate.ServerStarted(l.Addr().String())
+	}
 
 	s.clients = make(map[string]*Peer)
 
